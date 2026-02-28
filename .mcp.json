@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "hiveops": {
+      "command": "cmd",
+      "args": ["/c", "npx", "tsx", "server/src/index.ts", "stdio"],
+      "cwd": "C:\\Users\\USER\\hiveops",
+      "env": {
+        "HIVEOPS_DB_PATH": "C:\\Users\\USER\\hiveops\\server\\data\\hiveops.db"
+      }
+    }
+  }
+}

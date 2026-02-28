@@ -1,0 +1,12 @@
+{
+  "name": "hiveops",
+  "private": true,
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev": "npm run dev:server & npm run dev:client",
+    "dev:server": "npm run -w server dev",
+    "dev:client": "npm run -w client dev",
+    "build": "npm run -w server build && npm run -w client build",
+    "start": "npm run -w server start"
+  }
+}
