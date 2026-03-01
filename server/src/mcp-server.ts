@@ -114,12 +114,29 @@ export function registerMcp(server: McpServer, events: EventEmitter): void {
       task_id: z.string().describe("Task ID"),
       content: z.string().describe("Comment content"),
       author: z.string().optional().describe("Comment author name"),
+      type: z.enum(["comment", "feedback"]).optional().describe("Type: 'comment' (default) or 'feedback' for PM feedback"),
     },
     async (args) => {
       try {
         const comment = store.addComment(args);
         events.emit("comment:added", { task_id: args.task_id, comment });
         return { content: [{ type: "text" as const, text: JSON.stringify(comment, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "get_activity",
+    "Get the activity timeline for a task (comments, feedback, and status changes)",
+    {
+      task_id: z.string().describe("Task ID"),
+    },
+    async ({ task_id }) => {
+      try {
+        const timeline = store.getTimeline(task_id);
+        return { content: [{ type: "text" as const, text: JSON.stringify(timeline, null, 2) }] };
       } catch (e: any) {
         return mcpError(e);
       }
@@ -170,6 +187,114 @@ export function registerMcp(server: McpServer, events: EventEmitter): void {
         const state = store.getBoardState();
         const stats = store.getStats();
         return { content: [{ type: "text" as const, text: JSON.stringify({ ...state, stats }, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "get_agent_stats",
+    "Get per-agent statistics: tasks claimed, in-progress, completed, and completion rate",
+    {},
+    async () => {
+      try {
+        const stats = store.getAgentStats();
+        return { content: [{ type: "text" as const, text: JSON.stringify(stats, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "get_stale_tasks",
+    "Get tasks that have been in 'claimed' or 'in_progress' status past the timeout threshold",
+    {},
+    async () => {
+      try {
+        const tasks = store.getStaleTasks();
+        return { content: [{ type: "text" as const, text: JSON.stringify(tasks, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "add_dependency",
+    "Make a task depend on another task (blocked-by relationship)",
+    {
+      task_id: z.string().describe("The task that will be blocked"),
+      depends_on_id: z.string().describe("The task it depends on"),
+    },
+    async ({ task_id, depends_on_id }) => {
+      try {
+        store.addDependency(task_id, depends_on_id);
+        const task = store.getTask(task_id);
+        events.emit("task:updated", task);
+        const target = store.getTask(depends_on_id);
+        if (target) events.emit("task:updated", target);
+        return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true, task }, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "remove_dependency",
+    "Remove a dependency between tasks",
+    {
+      task_id: z.string().describe("The blocked task"),
+      depends_on_id: z.string().describe("The task to remove as dependency"),
+    },
+    async ({ task_id, depends_on_id }) => {
+      try {
+        store.removeDependency(task_id, depends_on_id);
+        const task = store.getTask(task_id);
+        events.emit("task:updated", task);
+        const target = store.getTask(depends_on_id);
+        if (target) events.emit("task:updated", target);
+        return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true }, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "add_task_file",
+    "Associate a file path with a task (scope)",
+    {
+      task_id: z.string().describe("Task ID"),
+      file_path: z.string().describe("File path to associate"),
+    },
+    async ({ task_id, file_path }) => {
+      try {
+        store.addTaskFile(task_id, file_path);
+        const task = store.getTask(task_id);
+        events.emit("task:updated", task);
+        return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true, task }, null, 2) }] };
+      } catch (e: any) {
+        return mcpError(e);
+      }
+    }
+  );
+
+  server.tool(
+    "remove_task_file",
+    "Remove a file association from a task",
+    {
+      task_id: z.string().describe("Task ID"),
+      file_path: z.string().describe("File path to remove"),
+    },
+    async ({ task_id, file_path }) => {
+      try {
+        store.removeTaskFile(task_id, file_path);
+        const task = store.getTask(task_id);
+        events.emit("task:updated", task);
+        return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true }, null, 2) }] };
       } catch (e: any) {
         return mcpError(e);
       }

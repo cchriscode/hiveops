@@ -1,3 +1,4 @@
+import React from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import type { Task, TaskStatus } from "../types";
@@ -15,7 +16,7 @@ export function Column({ status, label, color, tasks, onTaskClick }: Props) {
 
   return (
     <div className="column">
-      <div className="column-header" style={{ background: color }}>
+      <div className="column-header" style={{ '--col-accent': color } as React.CSSProperties}>
         <span className="column-title">{label}</span>
         <span className="column-count">{tasks.length}</span>
       </div>

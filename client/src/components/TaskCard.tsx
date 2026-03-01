@@ -1,20 +1,10 @@
 import { useDraggable } from "@dnd-kit/core";
 import type { Task } from "../types";
+import { timeAgo } from "../utils";
 
 interface Props {
   task: Task;
   onClick: (task: Task) => void;
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 export function TaskCard({ task, onClick }: Props) {
@@ -30,13 +20,15 @@ export function TaskCard({ task, onClick }: Props) {
   return (
     <div
       ref={setNodeRef}
-      className={`task-card ${isDragging ? "dragging" : ""}`}
+      className={`task-card ${isDragging ? "dragging" : ""} ${task.is_stale ? "task-stale" : ""}`}
+      data-priority={task.priority}
       style={style}
       {...listeners}
       {...attributes}
       onClick={() => { if (!isDragging) onClick(task); }}
     >
       <div className="task-card-top">
+        {task.is_stale && <span className="stale-badge">STALE</span>}
         {task.priority !== "medium" && (
           <span className={`priority-badge priority-${task.priority}`}>
             {task.priority}
@@ -46,6 +38,12 @@ export function TaskCard({ task, onClick }: Props) {
           <span className={`category-tag ${task.category}`}>
             {task.category}
           </span>
+        )}
+        {task.blocked_by?.length > 0 && (
+          <span className="blocked-badge">Blocked ({task.blocked_by.length})</span>
+        )}
+        {task.blocks?.length > 0 && (
+          <span className="blocks-badge">Blocks {task.blocks.length}</span>
         )}
       </div>
 

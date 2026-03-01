@@ -28,6 +28,10 @@ export function startHttpServer(port: number, events: EventEmitter): void {
     res.json(store.getStats());
   });
 
+  app.get("/api/tasks/stale", (_req, res) => {
+    res.json(store.getStaleTasks());
+  });
+
   app.get("/api/tasks", (req, res) => {
     res.json(store.listTasks(req.query as Record<string, string>));
   });
@@ -80,6 +84,10 @@ export function startHttpServer(port: number, events: EventEmitter): void {
     res.status(204).end();
   });
 
+  app.get("/api/tasks/:id/activity", (req, res) => {
+    res.json(store.getTimeline(req.params.id));
+  });
+
   app.get("/api/tasks/:id/comments", (req, res) => {
     const comments = store.listComments(req.params.id);
     res.json(comments);
@@ -91,12 +99,66 @@ export function startHttpServer(port: number, events: EventEmitter): void {
     res.status(201).json(comment);
   });
 
+  app.get("/api/tasks/:id/dependencies", (req, res) => {
+    res.json(store.getDependencies(req.params.id));
+  });
+
+  app.post("/api/tasks/:id/dependencies", (req, res) => {
+    try {
+      store.addDependency(req.params.id, req.body.depends_on_id);
+      const task = store.getTask(req.params.id)!;
+      broadcast({ type: "task:updated", task });
+      const target = store.getTask(req.body.depends_on_id);
+      if (target) broadcast({ type: "task:updated", task: target });
+      res.status(201).json({ ok: true });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/tasks/:id/dependencies/:depId", (req, res) => {
+    store.removeDependency(req.params.id, req.params.depId);
+    const task = store.getTask(req.params.id)!;
+    broadcast({ type: "task:updated", task });
+    const target = store.getTask(req.params.depId);
+    if (target) broadcast({ type: "task:updated", task: target });
+    res.status(204).end();
+  });
+
+  app.get("/api/tasks/:id/files", (req, res) => {
+    res.json(store.getTaskFiles(req.params.id));
+  });
+
+  app.post("/api/tasks/:id/files", (req, res) => {
+    try {
+      store.addTaskFile(req.params.id, req.body.file_path);
+      const task = store.getTask(req.params.id)!;
+      broadcast({ type: "task:updated", task });
+      res.status(201).json({ ok: true });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/tasks/:id/files", (req, res) => {
+    const filePath = req.query.path as string;
+    if (!filePath) return res.status(400).json({ error: "Missing path query param" });
+    store.removeTaskFile(req.params.id, filePath);
+    const task = store.getTask(req.params.id)!;
+    broadcast({ type: "task:updated", task });
+    res.status(204).end();
+  });
+
   app.get("/api/projects", (_req, res) => {
     res.json(store.getProjects());
   });
 
   app.get("/api/categories", (_req, res) => {
     res.json(store.getCategories());
+  });
+
+  app.get("/api/agents/stats", (_req, res) => {
+    res.json(store.getAgentStats());
   });
 
   // SPA fallback
@@ -141,6 +203,18 @@ export function startHttpServer(port: number, events: EventEmitter): void {
       });
     }
   }, 2000);
+
+  // Stale task check (every 60s) — broadcast updated board if stale tasks exist
+  setInterval(() => {
+    const stale = store.getStaleTasks();
+    if (stale.length > 0) {
+      broadcast({
+        type: "board:sync",
+        state: store.getBoardState(),
+        stats: store.getStats(),
+      });
+    }
+  }, 60_000);
 
   // Forward events from MCP (when running in same process)
   events.on("task:created", (task) => broadcast({ type: "task:created", task }));

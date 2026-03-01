@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createTask } from "../api";
+import { getErrorMessage } from "../utils";
 
 interface Props {
   onClose: () => void;
@@ -20,8 +21,8 @@ export function NewTaskModal({ onClose }: Props) {
     try {
       await createTask({ title, description, priority, category, project });
       onClose();
-    } catch (e: any) {
-      setError(e.message || "Failed to create task");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     }
   }
 

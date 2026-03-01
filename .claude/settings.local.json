@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx -w client tsc --noEmit)",
+      "Bash(npx -w server tsc --noEmit)",
+      "Bash(npx -w client vite build)",
+      "Bash(git init)",
+      "Bash(npm run -w client build)",
+      "mcp__hiveops__create_task",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(npx vite build)",
+      "mcp__hiveops__get_board_state",
+      "mcp__hiveops__update_task_status",
+      "Bash(sqlite3 server/data/hiveops.db \"DELETE FROM activity_log; DELETE FROM comments; DELETE FROM task_dependencies; DELETE FROM task_files; DELETE FROM tasks;\")",
+      "Bash(node -e \":*)",
+      "WebFetch(domain:linear.app)",
+      "WebFetch(domain:modelcontextprotocol.info)",
+      "WebFetch(domain:paddo.dev)"
+    ]
+  }
+}

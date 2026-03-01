@@ -15,6 +15,11 @@ export interface Task {
   claimed_at: string | null;
   completed_at: string | null;
   comment_count: number;
+  is_stale: boolean;
+  depends_on: string[];
+  blocked_by: string[];
+  blocks: string[];
+  files: string[];
 }
 
 export interface BoardState {
@@ -30,7 +35,20 @@ export interface Comment {
   task_id: string;
   author: string;
   content: string;
+  type: "comment" | "feedback";
   created_at: string;
+}
+
+export interface TimelineEntry {
+  kind: "comment" | "feedback" | "activity";
+  id: string;
+  task_id: string;
+  created_at: string;
+  author?: string;
+  content?: string;
+  action?: string;
+  actor?: string;
+  details?: string;
 }
 
 export interface BoardStats {
@@ -38,6 +56,18 @@ export interface BoardStats {
   active: number;
   done: number;
   rate: number;
+}
+
+export type SortMode = "time" | "priority";
+
+export interface AgentStats {
+  agent: string;
+  claimed: number;
+  in_progress: number;
+  review: number;
+  done: number;
+  total: number;
+  completion_rate: number;
 }
 
 export const COLUMNS: { key: TaskStatus; label: string; color: string }[] = [

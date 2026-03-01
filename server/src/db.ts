@@ -50,5 +50,42 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project);
     CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(agent);
     CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id);
+
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      actor TEXT NOT NULL DEFAULT 'system',
+      details TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_activity_log_task_id ON activity_log(task_id);
+
+    CREATE TABLE IF NOT EXISTS task_dependencies (
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      depends_on_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      PRIMARY KEY (task_id, depends_on_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_deps_task_id ON task_dependencies(task_id);
+    CREATE INDEX IF NOT EXISTS idx_deps_depends_on ON task_dependencies(depends_on_id);
+  `);
+
+  // Add type column to comments (idempotent)
+  try {
+    db.exec(`ALTER TABLE comments ADD COLUMN type TEXT NOT NULL DEFAULT 'comment'`);
+  } catch (_) {
+    // Column already exists
+  }
+
+  // task_files table (idempotent)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS task_files (
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      file_path TEXT NOT NULL,
+      PRIMARY KEY (task_id, file_path)
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_files_task_id ON task_files(task_id);
   `);
 }
